@@ -187,7 +187,7 @@ etch_star(n_planets, r1 = od+carrier_radius, r2=m, h=m, z=add(z)+gap*(len(z)-1)-
             x=x
             );
           if(i>0){ //add connecting bits in gaps
-              mim1 = m*(s[0] + p[0])/(s[i-1]+p[i-1]);
+              mim1 = m*(s[m_idx] + p[m_idx])/(s[i-1]+p[i-1]);
               bevelim1 = mim1+ded+backlash;
               r1 = mi*(pi)/2-bevel;
               r2 = mim1*(p[i-1])/2 - bevelim1;
@@ -346,8 +346,8 @@ module etch_star(points=5, r1=0, r2=1, h=1, z=0) {
 }
 //intersection(){
 //cube(1000);
-differential_planetary_gear(s=[23,27,23,30], p=[16,15,16,21], n_planets=6, z=[30,60,30,30], gap=2,
+differential_planetary_gear(s=[23,27,23,30], p=[16,15,16,21], n_planets=6, z=[25,50,25,25], gap=2,
               helix_angle=herringbone(helix=30), 
-              together_built=false, connect_suns=true, od=50,
+              together_built=false, connect_suns=true, od=75,
               $fn=20);
 //}
