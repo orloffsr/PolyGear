@@ -106,7 +106,7 @@ module planetary_gear(
 
 
     
-module differential_planetary_gear(
+module compound_planetary_gear(
 //basic options
   n_planets = 3,
   s = [], //sun teeth in each gearset
@@ -128,6 +128,9 @@ module differential_planetary_gear(
   x   = 0, // profile shift
   together_built=true, //if false, will build exploded model suitable for making individual parts
   od_padding = 3, //amount to add to radius of ring gear
+  od_bumps = 16,//number of protrusions on the OD
+  od_bumps_w = 3,
+  od_bumps_h = 3,// width and height of the protrusions
 //finesse options
   $fn=5,     // tooth profile subdivisions
 ){
@@ -149,7 +152,7 @@ module differential_planetary_gear(
 
   
 
-
+hex_shaft_hole(size=0.25*25.4 + .2) //1/4" hex, in mm plus clearance
 etch_star(n_planets, r1 = od+carrier_radius, r2=m, h=m, z=add(z)+gap*(len(z)-1)-m/2)
 {
   //planets
@@ -201,21 +204,21 @@ etch_star(n_planets, r1 = od+carrier_radius, r2=m, h=m, z=add(z)+gap*(len(z)-1)-
       
     }}//end of planets
   
-  
   ///////////////////sun(s)
+  
   if(connect_suns){
     assert(len(s)>=3 && len(p) >= 3);
     assert(s[0]==s[2] && p[0] == p[2]);
     
-    r0 = m*(s[0]-2)/2; //r and m same for sun 1 and 3
+    r0 = m_vec[0]*(s[0]-2)/2; //r and m same for sun 1 and 3
     r1 = m_vec[1]*(s[1] - 2)/2 - add - backlash - 2.1*m_vec[1]; //min radius, with clearance of 2m subtracted 
     
     //etch_star(n_planets, r1 = od+carrier_radius, r2=m, h=m/2)
     union(){
     Tz(z_shift(z, 0, gap))
-    cylindrical_bevel(r=r0+m, h=z[0], bevel=m+ded+backlash)
+    cylindrical_bevel(r=r0+m_vec[0], h=z[0], bevel=m_vec[0]+ded+backlash)
     spur_gear(
-            n=s[0], m=m, z=z[0], 
+            n=s[0], m=m_vec[0], z=z[0], 
             pressure_angle=pressure_angle,
             helix_angle=helix_angle,  backlash=backlash,
             chamfer = chamfer, chamfer_shift=chamfer_shift,
@@ -234,9 +237,9 @@ etch_star(n_planets, r1 = od+carrier_radius, r2=m, h=m, z=add(z)+gap*(len(z)-1)-
       }
       
     Tz(z_shift(z, 2, gap))
-    cylindrical_bevel(r=r0+m, h=z[2], bevel=m+ded+backlash)
+    cylindrical_bevel(r=r0+m_vec[2], h=z[2], bevel=m_vec[2]+ded+backlash)
     spur_gear(
-            n=s[2], m=m, z=z[2], 
+            n=s[2], m=m_vec[2], z=z[2], 
             pressure_angle=pressure_angle,
             helix_angle=helix_angle,  backlash=backlash,
             chamfer = chamfer, chamfer_shift=chamfer_shift,
@@ -266,19 +269,23 @@ etch_star(n_planets, r1 = od+carrier_radius, r2=m, h=m, z=add(z)+gap*(len(z)-1)-
               );
     
     }//end loop over suns
-  }//end else //ends of suns
+  }
+//end else //ends of suns
 
 //rings
-  
-  
+
   for (i = [0:1:len(rings)-1]){
-  
     half_tooth = p[i]%2<0.0001 ? 360/rings[i]/2 :0 ; //rotate 1/2 tooth if p is even
+    last = i==len(rings)-1;
+    y_offset = last ? 0 : max(od, carrier_radius) ;
+    z_offset = together_built ?  z_shift(z, i, gap) : z[i]/2;
     
-    Tz(z_shift(z, i, gap))
+    Tz(z_offset)
+    Ty(together_built ? 0 : (len(rings)-1-i)* (od+2*m+6) + y_offset )
+    split_ring(gap=together_built? 0:0.2)
     Rz(half_tooth)
     difference(){ //switches handedness
-      Cy(d= od, h=z[i]);
+      bumpyCy(d=od, h=z[i], n_bumps=od_bumps, h_bumps=od_bumps_h, w_bumps=od_bumps_w, $fn=0, $fa=9);//, h_bumps=3, w_bumps=3, $fn=0, $fa=6)//bumpyCy(d= od, h=z[i], $fn=0, $fa=6);
       spur_gear(
         n=rings[i], m=m_vec[i], z=z[i]+0.1*m_vec[i],
         pressure_angle=pressure_angle,
@@ -344,10 +351,46 @@ module etch_star(points=5, r1=0, r2=1, h=1, z=0) {
   else {children();}
   
 }
-//intersection(){
+
+module hex_shaft_hole(size=1){ //size is distance flat-to-flat
+  difference()
+  {
+    children();
+    Cy(r=size/sqrt(3), h=10000, $fn=6);
+  }
+}
+
+module split_ring(gap=0.2){
+  if(gap>0){
+   difference(){
+     children();
+     Tz(-10000)
+     cube([10000,gap,20000]);
+  }
+  }else {children();}
+}
+
+module bumpyCy(d=1, h=1, n_bumps=2, h_bumps=3, w_bumps=3, $fn=0, $fa=6){
+  delta_w = w_bumps/(d/2)*(180/PI)/2;
+  cylindrical_bevel(r=d/2+h_bumps, h=h, bevel=h_bumps/2)
+  union(){
+    for(i = [0.5:1:n_bumps-.5])
+    {
+    w=i*360/n_bumps;
+    //echo(delta_w, w);
+    CyS(r=d/2 + h_bumps, h=h, w1 =w-delta_w, w2 = w+delta_w);
+    } 
+    Cy(r=d/2,h=h);
+  }
+}
+//intersection()
+{
 //cube(1000);
-differential_planetary_gear(s=[23,27,23,30], p=[16,15,16,21], n_planets=6, z=[25,50,25,25], gap=2,
+
+compound_planetary_gear(s=[11,15,11,12], p=[13,11,13,14], n_planets=4, z=[20,40,20,20], gap=2,
               helix_angle=herringbone(helix=30), 
-              together_built=false, connect_suns=true, od=75,
-              $fn=20);
-//}
+              together_built=false,
+              connect_suns=true, 
+              od=50, od_padding=2,
+              $fn=10);
+}
