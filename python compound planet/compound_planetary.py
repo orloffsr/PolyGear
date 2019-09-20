@@ -7,7 +7,8 @@ def ratio_search(teeth_min = 11, ring_max = 50,
                 planets_min = 3, planets_max = 12, 
                 m2_min = 0.5, m2_max = 2.0,
                 ratio_min = 1200.0, ratio_max = 1E10,
-                results_max = 10000):
+                results_max = 10000,
+                ring_defect_max = 0):
         """Performs exhaustive search and returns a list of tuples.
         each tuple consists of (Np, s1, p1, r1, s2, p2, r2, ratio, m2) 
         meeting the criteria given as input. 
@@ -52,33 +53,35 @@ def ratio_search(teeth_min = 11, ring_max = 50,
                                     z2 += 1    
                                     for p2 in range(teeth_min, p_max):
                                         z2min=zmin_fun(p2)
-                                        s2 = int( (z2min + z2)*Np*f - p2 )
                                         
-                                        s2p2 = s2+p2
-                                        m2 = s2p2/s1p1
-                                        r2 = s2p2 + p2
-                                        if m2 > m2_min and m2 < m2_max and r2 < ring_max:
-                                            ratio_denom = (1- p2*r1/(p1*r2))
-                                            ratio = 0 if ratio_denom == 0 else  ratio_numer/ratio_denom
-                                            if ratio>ratio_min and ratio<ratio_max:
-                                                results.append((Np, s1, p1, r1, s2, p2, r2, ratio, m2))
-                                                #print([Np, s1, p1, r1, s2, p2, r2, ratio, m2])
-                                                if len(results)>results_max:
-                                                        print("Warning: max number of results exceeded")
-                                                        return results
+                                        for ring_defect in range(0,ring_defect_max+1):
+                                                s2 = int( (z2min + z2)*Np*f - p2 ) + ring_defect
+                                                s2p2 = s2+p2
+                                                m2 = s2p2/s1p1
+                                                r2 = s2p2 + p2 - 2*ring_defect
+                                                if m2 > m2_min and m2 < m2_max and r2 < ring_max:
+                                                    ratio_denom = (1- p2*r1/(p1*r2))
+                                                    ratio = 0 if ratio_denom == 0 else  ratio_numer/ratio_denom
+                                                    if ratio>ratio_min and ratio<ratio_max:
+                                                        results.append((Np, s1, p1, r1, s2, p2, r2, ratio, m2, ring_defect))
+                                                        #print([Np, s1, p1, r1, s2, p2, r2, ratio, m2, ring_defect])
+                                                        if len(results)>results_max:
+                                                                print("Warning: max number of results exceeded")
+                                                                return results
     
         return results
 
 
 if __name__ == "__main__":
-        results = ratio_search(teeth_min = 10, 
-                ring_max = 50, 
-                planets_min = 3, 
-                planets_max = 6, 
-                m2_min = 0.9, 
-                m2_max = 1.1,
-                ratio_min = 1000,
-                ratio_max = 1e10)
+        results = ratio_search(teeth_min = 7, 
+                ring_max = 55, 
+                planets_min = 4, 
+                planets_max = 12, 
+                m2_min = 0.3, 
+                m2_max = 3.0,
+                ratio_min = -2000000,
+                ratio_max = -3000,
+                ring_defect_max = 4)
                 
         for r in results:
                 print(r)
